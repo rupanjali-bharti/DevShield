@@ -1,0 +1,31 @@
+# 🛡️ DevShield
+### AI-Powered Security-First Development Environment
+
+DevShield is a browser-based developer tool that combines AI-assisted coding with real-time security auditing. It allows developers to clone repositories, edit code with an LLM assistant, and receive continuous security feedback—all in one unified environment.
+
+---
+
+## 🏗️ Current Project Status: [Under Development]
+This project is currently in the initial development phase. 
+
+### 🚀 Planned Features
+*   **Monaco Editor Integration:** Full file-tree navigation and multi-file editing.
+*   **Security Engine:** Static analysis using Semgrep and Bandit for Python, JS, and C.
+*   **AI Patch Suggestions:** LLM-powered explanations and automated vulnerability fixes.
+*   **Analytics Dashboard:** Tracking security scores and vulnerability trends.
+
+### 🛠️ Tech Stack (MERN + AI)
+- **Frontend:** React.js, Monaco Editor, Tailwind CSS
+- **Backend:** Node.js, Express, Socket.io
+- **AI/Security:** Python (Tree-sitter, Semgrep), Ollama, Groq API
+- **Database:** MongoDB
+
+---
+
+## 📂 Project Structure
+```text
+devshield/
+├── client/        # React Frontend
+├── server/        # Node.js Backend
+├── auditor/       # Python Security Microservice (In progress)
+└── README.md
