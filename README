@@ -28,4 +28,72 @@ devshield/
 ├── client/        # React Frontend
 ├── server/        # Node.js Backend
 ├── auditor/       # Python Security Microservice (In progress)
+├── workspaces/    # User workspace area (NOT committed to repo)
+│   └── Your project repos go here (local only)
 └── README.md
+
+⚠️ Note: workspaces/ is excluded from git (.gitignore)
+         Each developer has their own local workspace
+```
+
+---
+
+## 💾 Workspace Management (Important!)
+
+### How Workspaces Work
+- **`workspaces/`** is a **local-only directory** for your development projects
+- It's **excluded from git** to keep the main repository clean
+- Each developer has their own independent workspace on their machine
+
+### ✅ Best Practices
+
+**1. Keep Workspaces Local**
+```bash
+# ✅ DO: Clone external repos into workspaces/
+cd workspaces/
+git clone https://github.com/user/project.git
+
+# ❌ DON'T: Commit workspace repos to DevShield
+# (already prevented by .gitignore)
+```
+
+**2. Storage Efficiency**
+```bash
+# Only DevShield core is committed:
+- client/ (~5-10 MB)
+- server/ (~3-5 MB)
+- auditor/ (~2-3 MB)
+
+# Workspaces are kept LOCAL:
+- Each project takes its own space on your machine
+- No bloated repository on GitHub
+```
+
+**3. Git Structure**
+```
+.gitignore contains:
+  workspaces/      ← User's local projects
+  node_modules/    ← Dependencies
+  .env             ← Environment variables
+```
+
+### Cloning DevShield
+When someone clones DevShield:
+```bash
+git clone https://github.com/rupanjali-bharti/DevShield.git
+cd DevShield
+# Only core files downloaded (~20 MB)
+# Workspaces folder is empty but exists
+```
+
+### Adding Your Projects
+```bash
+cd workspaces/
+# Clone your project
+git clone <your-repo-url>
+
+# Now it's in your local workspace
+# Independent from DevShield git history
+```
+
+---

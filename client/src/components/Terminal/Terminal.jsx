@@ -87,8 +87,6 @@ function Terminal({ projectName, isOpen, onToggle }) {
         setHistoryIndex(-1);
         setInputValue("");
       }
-      setIsLoading(false);
-      setInputValue("");
     }
   };
 

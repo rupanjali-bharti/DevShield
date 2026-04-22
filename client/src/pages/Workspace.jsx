@@ -181,6 +181,7 @@ function Workspace() {
               file={selectedFile}
               content={fileContent}
               onChange={handleEditorChange}
+              projectName={projectName}
             />
           </div>
 

@@ -61,9 +61,94 @@ const getFileTree = (dirPath, baseDir = dirPath) => {
   return result;
 };
 
+const cleanNotebookCell = (source) => {
+  if (typeof source !== "string") {
+    source = Array.isArray(source) ? source.join("") : String(source);
+  }
+
+  let lines = source.split("\n");
+  let cleanedLines = [];
+  let hasRequirements = false;
+
+  for (let line of lines) {
+    // Remove Google Colab imports
+    if (line.includes("from google.colab")) {
+      continue;
+    }
+    if (line.includes("from google_colab_data")) {
+      continue;
+    }
+
+    // Convert pip magic commands to subprocess
+    if (line.trim().startsWith("!pip")) {
+      const packages = line.replace("!pip install", "").trim();
+      cleanedLines.push(`import subprocess\nimport sys\nsubprocess.check_call([sys.executable, "-m", "pip", "install", "${packages.split(" ").join('", "')}"])`);
+      hasRequirements = true;
+      continue;
+    }
+
+    // Convert apt-get magic commands
+    if (line.trim().startsWith("!apt-get")) {
+      // Skip system commands, user should install manually
+      console.warn("System command detected, skipping:", line.trim());
+      continue;
+    }
+
+    // Remove other shell commands
+    if (line.trim().startsWith("!")) {
+      console.warn("Shell command detected, skipping:", line.trim());
+      continue;
+    }
+
+    // Remove other magic commands
+    if (line.trim().startsWith("%")) {
+      console.warn("Magic command detected, skipping:", line.trim());
+      continue;
+    }
+
+    cleanedLines.push(line);
+  }
+
+  return cleanedLines.join("\n").trim();
+};
+
+const cleanNotebook = (notebookContent) => {
+  try {
+    const notebook = typeof notebookContent === "string" ? JSON.parse(notebookContent) : notebookContent;
+
+    if (notebook.cells && Array.isArray(notebook.cells)) {
+      notebook.cells = notebook.cells.map((cell) => {
+        if (cell.cell_type === "code") {
+          const source = Array.isArray(cell.source) ? cell.source.join("") : cell.source;
+          cell.source = cleanNotebookCell(source);
+        }
+        return cell;
+      });
+    }
+
+    return notebook;
+  } catch (error) {
+    console.error("Error cleaning notebook:", error);
+    return typeof notebookContent === "string" ? JSON.parse(notebookContent) : notebookContent;
+  }
+};
+
 const readFile = (roomId, filePath) => {
   const fullPath = path.join(WORKSPACES_DIR, roomId, filePath);
-  return fs.readFileSync(fullPath, "utf-8");
+  const content = fs.readFileSync(fullPath, "utf-8");
+
+  // Auto-clean Jupyter notebooks to remove Colab-specific code
+  if (filePath.endsWith(".ipynb")) {
+    try {
+      const cleanedNotebook = cleanNotebook(content);
+      return JSON.stringify(cleanedNotebook);
+    } catch (error) {
+      console.error("Failed to clean notebook:", error);
+      return content;
+    }
+  }
+
+  return content;
 };
 
 const writeFile = (roomId, filePath, content) => {
@@ -84,5 +169,7 @@ module.exports = {
   getFileTree,
   readFile,
   writeFile,
-  deleteWorkspace
+  deleteWorkspace,
+  cleanNotebook,
+  cleanNotebookCell
 };
