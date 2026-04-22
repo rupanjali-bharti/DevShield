@@ -24,3 +24,11 @@ export const saveFile = async (projectName, filePath, content) => {
   );
   return response.data;
 };
+
+export const executeTerminalCommand = async (projectName, command) => {
+  const response = await axios.post(
+    `${BASE_URL}/api/git/${projectName}/terminal`,
+    { command }
+  );
+  return response.data;
+};

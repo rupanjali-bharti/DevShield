@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import FileTree from "../components/FileTree/FileTree";
 import CodeEditor from "../components/Editor/CodeEditor";
+import Terminal from "../components/Terminal/Terminal";
 import { getFileContent, saveFile } from "../services/api";
 
 function Workspace() {
@@ -11,6 +12,7 @@ function Workspace() {
   const [fileContent, setFileContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const savedTimerRef = useRef(null);
 
   const projectName = state?.projectName;
@@ -68,6 +70,11 @@ function Workspace() {
         e.preventDefault();
         handleSave();
       }
+      // Toggle terminal with Ctrl+`
+      if (e.ctrlKey && e.key === "`") {
+        e.preventDefault();
+        setIsTerminalOpen((prev) => !prev);
+      }
     },
     [handleSave]
   );
@@ -103,6 +110,19 @@ function Workspace() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Terminal Toggle Button */}
+          <button
+            onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+            className={`text-white text-xs px-3 py-1.5 rounded transition-colors ${
+              isTerminalOpen
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-700 hover:bg-gray-600"
+            }`}
+            title="Toggle Terminal (Ctrl+`)"
+          >
+            Terminal {isTerminalOpen ? "✕" : "⌄"}
+          </button>
+
           {/* Save status */}
           {saving && (
             <span className="text-yellow-400 text-xs">Saving...</span>
@@ -131,35 +151,51 @@ function Workspace() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden flex-col">
 
-        {/* Sidebar — File Tree */}
-        <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden">
-          <div className="px-3 py-2 border-b border-gray-700">
-            <p className="text-gray-400 text-xs uppercase tracking-wider">
-              Explorer
-            </p>
-            <p className="text-gray-300 text-sm font-medium mt-1 truncate">
-              {projectName}
-            </p>
+        {/* Editor and FileTree Container */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* Sidebar — File Tree */}
+          <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden">
+            <div className="px-3 py-2 border-b border-gray-700">
+              <p className="text-gray-400 text-xs uppercase tracking-wider">
+                Explorer
+              </p>
+              <p className="text-gray-300 text-sm font-medium mt-1 truncate">
+                {projectName}
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <FileTree
+                fileTree={fileTree}
+                onFileClick={handleFileClick}
+                selectedFile={selectedFile}
+              />
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
-            <FileTree
-              fileTree={fileTree}
-              onFileClick={handleFileClick}
-              selectedFile={selectedFile}
+
+          {/* Editor */}
+          <div className="flex-1 overflow-hidden">
+            <CodeEditor
+              file={selectedFile}
+              content={fileContent}
+              onChange={handleEditorChange}
             />
           </div>
+
         </div>
 
-        {/* Editor */}
-        <div className="flex-1 overflow-hidden">
-          <CodeEditor
-            file={selectedFile}
-            content={fileContent}
-            onChange={handleEditorChange}
-          />
-        </div>
+        {/* Terminal */}
+        {isTerminalOpen && (
+          <div className="h-64 bg-gray-900">
+            <Terminal
+              projectName={projectName}
+              isOpen={isTerminalOpen}
+              onToggle={() => setIsTerminalOpen(false)}
+            />
+          </div>
+        )}
 
       </div>
     </div>
