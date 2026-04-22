@@ -1,99 +1,147 @@
 # 🛡️ DevShield
-### AI-Powered Security-First Development Environment
+### Self-Improving AI Codebase Auditor & Security-First IDE
 
-DevShield is a browser-based developer tool that combines AI-assisted coding with real-time security auditing. It allows developers to clone repositories, edit code with an LLM assistant, and receive continuous security feedback—all in one unified environment.
+DevShield is a **browser-based, AI-powered development environment** that combines intelligent code editing with **real-time security auditing**. Unlike traditional AI tools that treat code as plain text, DevShield understands code as **structured logic** using graphs.
 
 ---
 
-## 🏗️ Current Project Status: [Under Development]
-This project is currently in the initial development phase. 
+## 🚀 Why DevShield?
 
-### 🚀 Planned Features
-*   **Monaco Editor Integration:** Full file-tree navigation and multi-file editing.
-*   **Security Engine:** Static analysis using Semgrep and Bandit for Python, JS, and C.
-*   **AI Patch Suggestions:** LLM-powered explanations and automated vulnerability fixes.
-*   **Analytics Dashboard:** Tracking security scores and vulnerability trends.
+Standard AI tools (like GitHub Copilot) often generate fixes that break logic or miss vulnerabilities. DevShield solves this by grounding AI in **code structure + data flow**.
 
-### 🛠️ Tech Stack (MERN + AI)
-- **Frontend:** React.js, Monaco Editor, Tailwind CSS
-- **Backend:** Node.js, Express, Socket.io
-- **AI/Security:** Python (Tree-sitter, Semgrep), Ollama, Groq API
-- **Database:** MongoDB
+| AI Limitation        | DevShield Solution                                      | Technology Used           |
+|----------------------|---------------------------------------------------------|---------------------------|
+| Syntax Errors        | Validates patches against **AST** before suggesting     | Tree-sitter, Monaco       |
+| Location Errors      | Injects fixes at exact logical node                     | Code Property Graph (CPG) |
+| Semantic Drift       | Ensures logic consistency via **CFG tracking**          | Control Flow Graph        |
+| Misleading Fixes     | Verifies secure flow using **Taint Analysis**           | Data Flow Graph           |
+| Partial Fixes        | Detects cross-file issues via repo-wide analysis        | GNN Embeddings            |
+| Human Intent Gap     | Learns from accepted/rejected fixes                     | Feedback Loop             |
+
+---
+
+## 🧠 Core Innovation: Graph-First AI
+
+DevShield converts code into a **Code Property Graph (CPG)**, combining:
+
+- **AST (Abstract Syntax Tree)** → Syntax structure  
+- **CFG (Control Flow Graph)** → Execution paths  
+- **PDG (Program/Data Flow Graph)** → Data dependencies  
+
+A **Graph Neural Network (GNN)** analyzes this structure to detect:
+- Unsafe data flows
+- Injection vulnerabilities
+- Logic anomalies
+
+---
+
+## 🏗️ Visual Architecture
+            ┌────────────────────────────-┐
+            │        Frontend (UI)        │
+            │-----------------------------│
+            │ • Monaco Editor             │
+            │ • File Explorer             │
+            │ • Xterm.js (Logs/AI Trace)  │
+            │ • Tailwind UI               │
+            └────────────┬───────────────-┘
+                         │
+                         ▼
+            ┌────────────────────────────┐
+            │     Backend (Node.js)      │
+            │----------------------------│
+            │ • Express API              │
+            │ • Socket.io (Realtime)     │
+            │ • Workspace Manager        │
+            └────────────┬───────────────┘
+                         │
+                         ▼
+    ┌──────────────────────────────────────────────┐
+    │        Auditor Microservice (Python)         │
+    │----------------------------------------------│
+    │ 1. Code → CPG (AST + CFG + PDG)              │
+    │ 2. GNN scans graph for anomalies             │
+    │ 3. Taint Analysis (Source → Sink tracking)   │
+    │ 4. Semgrep + Bandit scans                    │
+    │ 5. LLM generates fixes (Ollama / Groq)       │
+    └────────────┬─────────────────────────────────┘
+                 │
+                 ▼
+    ┌──────────────────────────────────────────────┐
+    │        AI Reasoning + Feedback Loop          │
+    │----------------------------------------------│
+    │ • Patch validation via AST                   │
+    │ • CFG consistency check                      │
+    │ • Learns from user feedback                  │
+    └──────────────────────────────────────────────┘
+
+    
+---
+
+## ⚙️ System Architecture (Detailed)
+
+### 1. 🖥️ Frontend (The Interface)
+- **Monaco Editor** → Multi-file editing with IntelliSense  
+- **Xterm.js** → Real-time logs (AI reasoning, GNN output)  
+- **Tailwind CSS** → Clean developer UI  
+
+---
+
+### 2. 🧠 Reasoning Engine (The Brain)
+- **Graph Construction**
+  - Code → CPG (AST + CFG + PDG)
+- **GNN Layer**
+  - Detects anomalous data/control flows
+- **LLM Reasoning**
+  - Generates:
+    - Human-readable explanations
+    - Structurally correct patches
+
+---
+
+### 3. 🔐 Security & Analytics Layer
+- **Multi-Engine Scan**
+  - Semgrep
+  - Bandit
+  - Custom GNN
+- **Taint Analysis**
+  - Tracks input → vulnerable sink
+- **Self-Improving Loop**
+  - Stores feedback in vector DB
+  - Improves future suggestions
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- React.js
+- Monaco Editor
+- Tailwind CSS
+
+### Backend
+- Node.js
+- Express
+- Socket.io
+
+### AI & Security
+- Python
+- Tree-sitter
+- Semgrep
+- Bandit
+- Ollama / Groq API
+- Graph Neural Networks (GNN)
+
+### Database
+- MongoDB (for analytics + feedback loop)
 
 ---
 
 ## 📂 Project Structure
+
 ```text
 devshield/
-├── client/        # React Frontend
-├── server/        # Node.js Backend
-├── auditor/       # Python Security Microservice (In progress)
-├── workspaces/    # User workspace area (NOT committed to repo)
-│   └── Your project repos go here (local only)
+├── client/          # React Frontend (Monaco, Tailwind, Socket.io)
+├── server/          # Node.js Backend (Express, APIs)
+├── auditor/         # Python Security Engine (GNN, Tree-sitter, Semgrep)
+├── workspaces/      # ⚠️ LOCAL ONLY: User project directory
 └── README.md
-
-⚠️ Note: workspaces/ is excluded from git (.gitignore)
-         Each developer has their own local workspace
-```
-
----
-
-## 💾 Workspace Management (Important!)
-
-### How Workspaces Work
-- **`workspaces/`** is a **local-only directory** for your development projects
-- It's **excluded from git** to keep the main repository clean
-- Each developer has their own independent workspace on their machine
-
-### ✅ Best Practices
-
-**1. Keep Workspaces Local**
-```bash
-# ✅ DO: Clone external repos into workspaces/
-cd workspaces/
-git clone https://github.com/user/project.git
-
-# ❌ DON'T: Commit workspace repos to DevShield
-# (already prevented by .gitignore)
-```
-
-**2. Storage Efficiency**
-```bash
-# Only DevShield core is committed:
-- client/ (~5-10 MB)
-- server/ (~3-5 MB)
-- auditor/ (~2-3 MB)
-
-# Workspaces are kept LOCAL:
-- Each project takes its own space on your machine
-- No bloated repository on GitHub
-```
-
-**3. Git Structure**
-```
-.gitignore contains:
-  workspaces/      ← User's local projects
-  node_modules/    ← Dependencies
-  .env             ← Environment variables
-```
-
-### Cloning DevShield
-When someone clones DevShield:
-```bash
-git clone https://github.com/rupanjali-bharti/DevShield.git
-cd DevShield
-# Only core files downloaded (~20 MB)
-# Workspaces folder is empty but exists
-```
-
-### Adding Your Projects
-```bash
-cd workspaces/
-# Clone your project
-git clone <your-repo-url>
-
-# Now it's in your local workspace
-# Independent from DevShield git history
-```
-
----
