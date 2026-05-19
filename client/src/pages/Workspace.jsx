@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import FileTree from "../components/FileTree/FileTree";
+import FileTreeWithIssues from "../components/FileTree/FileTreeWithIssues";
 import CodeEditor from "../components/Editor/CodeEditor";
+import SecurityPanel from "../components/SecurityPanel/SecurityPanel";
 import Terminal from "../components/Terminal/Terminal";
 import { getFileContent, saveFile } from "../services/api";
 
@@ -13,10 +14,52 @@ function Workspace() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [terminalHeight, setTerminalHeight] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const savedTimerRef = useRef(null);
+  const dragStartYRef = useRef(0);
 
   const projectName = state?.projectName;
   const fileTree = state?.fileTree;
+
+  // Mock security findings - replace with real data from your audit
+  const [securityFindings] = useState([
+    {
+      title: "SQL Injection Vulnerability",
+      severity: "critical",
+      line: 5,
+      description: "User input is directly concatenated into SQL query without proper parameterization.",
+      code: 'query = "SELECT * FROM users WHERE name=\'" + username + "\'"',
+      suggestedFix: 'query = "SELECT * FROM users WHERE name=?" with parameterized query',
+      cwe: "CWE-89",
+      cve: "CVE-2024-12345"
+    },
+    {
+      title: "Plaintext Password Comparison",
+      severity: "critical",
+      line: 12,
+      description: "Passwords are being compared as plaintext instead of using secure hashing.",
+      code: "return pw == stored_hash",
+      suggestedFix: "return bcrypt.checkpw(pw.encode(), stored_hash)",
+      cwe: "CWE-256"
+    },
+    {
+      title: "Hardcoded API Key",
+      severity: "medium",
+      line: 3,
+      description: "API key is hardcoded in the source code.",
+      code: 'API_KEY = "sk_live_abc123def456"',
+      suggestedFix: 'API_KEY = os.getenv("API_KEY")',
+      cwe: "CWE-798"
+    },
+  ]);
+
+  // Mock issues map - maps file paths to issue counts
+  const [issuesMap] = useState({
+    "auth.py": 2,
+    "db.py": 1,
+    "routes.py": 0,
+  });
 
   // Redirect home if no project — using useEffect to avoid hook order violation
   useEffect(() => {
@@ -78,6 +121,38 @@ function Workspace() {
     },
     [handleSave]
   );
+
+  // Terminal resize handlers
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    dragStartYRef.current = e.clientY;
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging || !isTerminalOpen) return;
+      const delta = dragStartYRef.current - e.clientY;
+      const newHeight = terminalHeight + delta;
+      if (newHeight > 80 && newHeight < 800) {
+        setTerminalHeight(newHeight);
+        dragStartYRef.current = e.clientY;
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, isTerminalOpen, terminalHeight]);
 
   // Cleanup the saved timer on unmount to prevent state updates on unmounted component
   useEffect(() => {
@@ -153,10 +228,10 @@ function Workspace() {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden flex-col">
 
-        {/* Editor and FileTree Container */}
+        {/* Editor and Panels Container */}
         <div className="flex flex-1 overflow-hidden">
 
-          {/* Sidebar — File Tree */}
+          {/* Left Sidebar — File Tree */}
           <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-700">
               <p className="text-gray-400 text-xs uppercase tracking-wider">
@@ -167,15 +242,16 @@ function Workspace() {
               </p>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <FileTree
+              <FileTreeWithIssues
                 fileTree={fileTree}
                 onFileClick={handleFileClick}
                 selectedFile={selectedFile}
+                issuesMap={issuesMap}
               />
             </div>
           </div>
 
-          {/* Editor */}
+          {/* Center — Code Editor */}
           <div className="flex-1 overflow-hidden">
             <CodeEditor
               file={selectedFile}
@@ -185,16 +261,32 @@ function Workspace() {
             />
           </div>
 
+          {/* Right Sidebar — Security Findings */}
+          <div className="w-80 bg-gray-800 border-l border-gray-700 overflow-hidden flex flex-col">
+            <SecurityPanel findings={securityFindings} />
+          </div>
+
         </div>
 
-        {/* Terminal */}
+        {/* Terminal — Collapsible at Bottom */}
         {isTerminalOpen && (
-          <div className="h-64 bg-gray-900">
-            <Terminal
-              projectName={projectName}
-              isOpen={isTerminalOpen}
-              onToggle={() => setIsTerminalOpen(false)}
+          <div className="bg-gray-900 border-t border-gray-700 flex flex-col">
+            {/* Terminal Resize Handle */}
+            <div
+              onMouseDown={handleMouseDown}
+              className={`h-1 bg-gray-700 hover:bg-blue-600 cursor-row-resize transition-colors ${
+                isDragging ? "bg-blue-600" : ""
+              }`}
             />
+
+            {/* Terminal Content */}
+            <div style={{ height: terminalHeight > 0 ? `${terminalHeight}px` : "240px" }} className="flex flex-col overflow-hidden">
+              <Terminal
+                projectName={projectName}
+                isOpen={isTerminalOpen}
+                onToggle={() => setIsTerminalOpen(false)}
+              />
+            </div>
           </div>
         )}
 
