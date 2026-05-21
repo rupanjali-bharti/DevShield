@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+
+  # ── React Frontend ──────────────────────────────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+  # ── Node.js Backend ─────────────────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - AUDITOR_URL=http://auditor:8000
+      - NODE_ENV=production
+    volumes:
+      - workspaces:/app/workspaces   # shared workspace volume
+    depends_on:
+      - auditor
+      - mongodb
+
+  # ── Python Auditor ──────────────────────────────────────────────────────────
+  auditor:
+    build:
+      context: ./auditor
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_PROVIDER=groq
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MONGO_URI=mongodb://mongodb:27017
+      - WORKSPACES_PATH=/workspaces
+    volumes:
+      - workspaces:/workspaces       # same volume — no file copying needed
+    depends_on:
+      - mongodb
+
+  # ── MongoDB ─────────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  workspaces:
+  mongo_data:

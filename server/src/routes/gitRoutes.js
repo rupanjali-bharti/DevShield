@@ -1,12 +1,14 @@
-const express = require("express");
+import express from "express";
+import { cloneRepo, getFileTree } from "../git/gitService.js";
+import path from "path";
+import fs from "fs";
+import { execSync } from "child_process";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const router = express.Router();
-const {
-  cloneRepo,
-  getFileTree
-} = require("../git/gitService");
-const path = require("path");
-const fs = require("fs");
-const { execSync } = require("child_process");
 
 const WORKSPACES_DIR = path.join(__dirname, "../../../workspaces");
 
@@ -253,4 +255,88 @@ router.post("/:projectName/commit", (req, res) => {
   }
 });
 
-module.exports = router;
+// Git push to remote
+router.post("/:projectName/push", (req, res) => {
+  const { projectName } = req.params;
+  const { remote = "origin", branch = null } = req.body;
+
+  const projectPath = path.join(WORKSPACES_DIR, projectName);
+
+  try {
+    // Check if it's a git repository
+    try {
+      execSync("git rev-parse --git-dir", { cwd: projectPath, encoding: "utf-8" });
+    } catch (gitCheckError) {
+      return res.status(400).json({
+        success: false,
+        error: "Not a git repository",
+        path: projectPath,
+      });
+    }
+
+    // Get current branch if not specified
+    let targetBranch = branch;
+    if (!targetBranch) {
+      targetBranch = execSync("git rev-parse --abbrev-ref HEAD", { cwd: projectPath, encoding: "utf-8" }).trim();
+    }
+
+    // Check if there are any commits to push
+    try {
+      execSync("git log -1", { cwd: projectPath, encoding: "utf-8" });
+    } catch (_) {
+      return res.status(400).json({
+        success: false,
+        error: "No commits to push. Make a commit first.",
+      });
+    }
+
+    // Check if the remote exists
+    try {
+      execSync(`git rev-parse --verify refs/remotes/${remote}/HEAD`, { cwd: projectPath, encoding: "utf-8" });
+    } catch (_) {
+      return res.status(400).json({
+        success: false,
+        error: `Remote '${remote}' does not exist or is not accessible.`,
+      });
+    }
+
+    // Push to the remote
+    const pushOutput = execSync(`git push ${remote} ${targetBranch}`, {
+      cwd: projectPath,
+      encoding: "utf-8",
+    });
+
+    res.json({
+      success: true,
+      output: pushOutput,
+      branch: targetBranch,
+      remote: remote,
+    });
+  } catch (error) {
+    const stderr = error.stderr ? error.stderr.toString() : "";
+    const stdout = error.stdout ? error.stdout.toString() : "";
+
+    console.error(`Push failed for ${projectName}:`, error.message);
+
+    // Determine the specific error
+    let friendlyError = stderr || error.message;
+    if (friendlyError.includes("src refspec")) {
+      friendlyError = "The branch does not exist or has no commits. Try committing first.";
+    } else if (friendlyError.includes("Authentication failed")) {
+      friendlyError = "Authentication failed. Check your credentials and remote URL.";
+    }
+
+    res.status(400).json({
+      success: false,
+      output: stdout,
+      error: friendlyError,
+      details: {
+        projectPath,
+        command: "git push",
+        stderr: stderr,
+      },
+    });
+  }
+});
+
+export default router;

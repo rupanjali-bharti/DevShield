@@ -1,6 +1,10 @@
-const simpleGit = require("simple-git");
-const path = require("path");
-const fs = require("fs");
+import simpleGit from "simple-git";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const WORKSPACES_DIR = path.join(__dirname, "../../../workspaces");
 
@@ -164,7 +168,7 @@ const deleteWorkspace = (roomId) => {
   }
 };
 
-module.exports = {
+export {
   cloneRepo,
   getFileTree,
   readFile,

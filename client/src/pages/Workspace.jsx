@@ -4,7 +4,9 @@ import FileTreeWithIssues from "../components/FileTree/FileTreeWithIssues";
 import CodeEditor from "../components/Editor/CodeEditor";
 import SecurityPanel from "../components/SecurityPanel/SecurityPanel";
 import Terminal from "../components/Terminal/Terminal";
+import AuditPanel from "../components/AuditPanel/AuditPanel";
 import { getFileContent, saveFile } from "../services/api";
+import { auditFile, formatFindings } from "../services/auditorService.js";
 
 function Workspace() {
   const { state } = useLocation();
@@ -16,48 +18,42 @@ function Workspace() {
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [terminalHeight, setTerminalHeight] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isAuditPanelOpen, setIsAuditPanelOpen] = useState(false);
   const savedTimerRef = useRef(null);
   const dragStartYRef = useRef(0);
 
   const projectName = state?.projectName;
   const fileTree = state?.fileTree;
 
-  // Mock security findings - replace with real data from your audit
-  const [securityFindings] = useState([
-    {
-      title: "SQL Injection Vulnerability",
-      severity: "critical",
-      line: 5,
-      description: "User input is directly concatenated into SQL query without proper parameterization.",
-      code: 'query = "SELECT * FROM users WHERE name=\'" + username + "\'"',
-      suggestedFix: 'query = "SELECT * FROM users WHERE name=?" with parameterized query',
-      cwe: "CWE-89",
-      cve: "CVE-2024-12345"
+  // Real security findings from auditor
+  const [securityFindings, setSecurityFindings] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState(null);
+
+  // Perform audit on file
+  const handleAuditFile = useCallback(
+    async (project, filePath) => {
+      setAuditLoading(true);
+      setAuditError(null);
+      try {
+        const result = await auditFile(project, filePath);
+        const formattedFindings = formatFindings(result);
+        setSecurityFindings(formattedFindings);
+      } catch (error) {
+        setAuditError(error.message);
+        console.error("Audit failed:", error);
+        // Keep previous findings on error
+      } finally {
+        setAuditLoading(false);
+      }
     },
-    {
-      title: "Plaintext Password Comparison",
-      severity: "critical",
-      line: 12,
-      description: "Passwords are being compared as plaintext instead of using secure hashing.",
-      code: "return pw == stored_hash",
-      suggestedFix: "return bcrypt.checkpw(pw.encode(), stored_hash)",
-      cwe: "CWE-256"
-    },
-    {
-      title: "Hardcoded API Key",
-      severity: "medium",
-      line: 3,
-      description: "API key is hardcoded in the source code.",
-      code: 'API_KEY = "sk_live_abc123def456"',
-      suggestedFix: 'API_KEY = os.getenv("API_KEY")',
-      cwe: "CWE-798"
-    },
-  ]);
+    []
+  );
 
   // Mock issues map - maps file paths to issue counts
   const [issuesMap] = useState({
-    "auth.py": 2,
-    "db.py": 1,
+    "auth.py": 0,
+    "db.py": 0,
     "routes.py": 0,
   });
 
@@ -76,11 +72,14 @@ function Workspace() {
         setSelectedFile(file);
         setFileContent(content);
         setSaved(false);
+        
+        // Auto-audit the file
+        await handleAuditFile(projectName, file.path);
       } catch (error) {
         console.error("Failed to read file:", error);
       }
     },
-    [projectName]
+    [projectName, handleAuditFile]
   );
 
   const handleEditorChange = useCallback((value) => {
@@ -185,6 +184,19 @@ function Workspace() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Audit Panel Toggle Button */}
+          <button
+            onClick={() => setIsAuditPanelOpen(!isAuditPanelOpen)}
+            className={`text-white text-xs px-3 py-1.5 rounded transition-colors ${
+              isAuditPanelOpen
+                ? "bg-purple-600 hover:bg-purple-700"
+                : "bg-gray-700 hover:bg-gray-600"
+            }`}
+            title="Toggle Audit Panel"
+          >
+            🔍 Audit {isAuditPanelOpen ? "✕" : ""}
+          </button>
+
           {/* Terminal Toggle Button */}
           <button
             onClick={() => setIsTerminalOpen(!isTerminalOpen)}
@@ -263,7 +275,11 @@ function Workspace() {
 
           {/* Right Sidebar — Security Findings */}
           <div className="w-80 bg-gray-800 border-l border-gray-700 overflow-hidden flex flex-col">
-            <SecurityPanel findings={securityFindings} />
+            <SecurityPanel 
+              findings={securityFindings} 
+              loading={auditLoading} 
+              error={auditError}
+            />
           </div>
 
         </div>
@@ -291,6 +307,15 @@ function Workspace() {
         )}
 
       </div>
+
+      {/* Audit Panel - Side Window */}
+      <AuditPanel
+        isOpen={isAuditPanelOpen}
+        onClose={() => setIsAuditPanelOpen(false)}
+        projectName={projectName}
+        selectedFile={selectedFile}
+        fileTree={fileTree}
+      />
     </div>
   );
 }

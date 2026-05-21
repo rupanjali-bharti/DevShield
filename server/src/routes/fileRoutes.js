@@ -1,6 +1,7 @@
-const express = require("express");
+import express from "express";
+import { readFile, writeFile } from "../git/gitService.js";
+
 const router = express.Router();
-const { readFile, writeFile } = require("../git/gitService");
 
 // Read a file
 router.get("/:projectName", (req, res) => {
@@ -38,4 +39,4 @@ router.post("/:projectName", (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

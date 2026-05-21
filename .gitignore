@@ -1,3 +1,25 @@
 workspaces/
 node_modules/
 .env
+# Python virtual environments
+auditor/venv/
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Node
+node_modules/
+
+# Environment variables
+.env
+
+# OS
+.DS_Store
+Thumbs.db
