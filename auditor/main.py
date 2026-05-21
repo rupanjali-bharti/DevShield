@@ -77,6 +77,66 @@ async def audit_file(req: AuditRequest):
         os.path.join(settings.WORKSPACES_PATH, req.project_name)
     )
 
+    # 👉 ADD THESE PRINT STATEMENTS HERE 👈
+    print("\n" + "="*50)
+    print("🕵️‍♂️ DEBUG: AUDIT REQUEST RECEIVED")
+    print(f"Project Name:    {req.project_name}")
+    print(f"Requested File:  {req.file_path}")
+    print(f"Workspace Root:  {workspace_root}")
+    print(f"Absolute Path:   {abs_path}")
+    print(f"Is this a File?: {os.path.isfile(abs_path)}")
+    print(f"Is this a Dir?:  {os.path.isdir(abs_path)}")
+    print("="*50 + "\n")
+
+    # Block path traversal attacks (e.g. ../../etc/passwd)
+    if not abs_path.startswith(workspace_root):
+        raise HTTPException(status_code=400, detail="Invalid file path.")
+
+    # 🚨 If you pass a folder, this line stops the audit and throws an error!
+    if not os.path.isfile(abs_path):
+        raise HTTPException(status_code=404, detail=f"File not found: {req.file_path}")
+
+    try:
+        # ── 2. AST Parsing ────────────────────────────────────────────────
+        ast_result   = parse_file(abs_path)
+        dep_graph    = build_dependency_graph(ast_result)
+
+        # ── 3. Static Scanning ───────────────────────────────────────────
+        semgrep_hits = run_semgrep(abs_path)
+        bandit_hits  = run_bandit(abs_path)
+
+        # ── 4. Merge + Deduplicate ────────────────────────────────────────
+        findings     = aggregate_findings(semgrep_hits, bandit_hits)
+
+        # ── 5. LLM Enrichment ────────────────────────────────────────────
+        enriched     = await explain_and_patch(findings, abs_path)
+
+        return {
+            "status":             "success",
+            "file":               req.file_path,
+            "vulnerability_count": len(enriched),
+            "findings":           enriched,
+            "dependency_graph":   dep_graph,
+            "ast_summary":        ast_result.get("summary", {}),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Audit failed: {str(e)}")
+
+    """
+    Full audit pipeline for a single file:
+      parse → scan → aggregate → LLM enrich → return
+    """
+    # ── 1. Resolve and validate path ──────────────────────────────────────
+    abs_path = os.path.abspath(
+        os.path.join(settings.WORKSPACES_PATH, req.project_name, req.file_path)
+    )
+    workspace_root = os.path.abspath(
+        os.path.join(settings.WORKSPACES_PATH, req.project_name)
+    )
+
     # Block path traversal attacks (e.g. ../../etc/passwd)
     if not abs_path.startswith(workspace_root):
         raise HTTPException(status_code=400, detail="Invalid file path.")
