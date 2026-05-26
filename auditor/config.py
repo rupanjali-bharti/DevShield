@@ -20,9 +20,9 @@ ALLOWED_ORIGINS: List[str] = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000
 # Example: /home/user/DevShield/workspaces or C:\Users\DevShield\workspaces
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # BASE_DIR = devshield/
-WORKSPACES_PATH: str = os.getenv(
+WORKSPACES_PATH = os.environ.get(
     "WORKSPACES_PATH",
-    os.path.join(BASE_DIR, "workspaces")
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "workspaces"))
 )
 
 

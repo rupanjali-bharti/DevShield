@@ -22,6 +22,11 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
+// Health check
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", service: "devshield-server" });
+});
+
 // Routes
 app.use("/api/git", gitRoutes);
 app.use("/api/files", fileRoutes);

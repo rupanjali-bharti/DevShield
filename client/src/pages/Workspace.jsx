@@ -32,11 +32,11 @@ function Workspace() {
 
   // Perform audit on file
   const handleAuditFile = useCallback(
-    async (project, filePath) => {
+    async (project, filePath, code) => {
       setAuditLoading(true);
       setAuditError(null);
       try {
-        const result = await auditFile(project, filePath);
+        const result = await auditFile(project, filePath, code);
         const formattedFindings = formatFindings(result);
         setSecurityFindings(formattedFindings);
       } catch (error) {
@@ -73,8 +73,8 @@ function Workspace() {
         setFileContent(content);
         setSaved(false);
         
-        // Auto-audit the file
-        await handleAuditFile(projectName, file.path);
+        // Auto-audit the file with content
+        await handleAuditFile(projectName, file.path, content);
       } catch (error) {
         console.error("Failed to read file:", error);
       }
@@ -315,6 +315,7 @@ function Workspace() {
         projectName={projectName}
         selectedFile={selectedFile}
         fileTree={fileTree}
+        fileContent={fileContent}
       />
     </div>
   );

@@ -6,7 +6,8 @@ function AuditPanel({
   onClose, 
   projectName, 
   selectedFile, 
-  fileTree 
+  fileTree,
+  fileContent = ""
 }) {
   const [findings, setFindings] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -43,7 +44,7 @@ function AuditPanel({
     setAuditedFile(normalizedPath);
 
     try {
-      const result = await auditFile(projectName, normalizedPath);
+      const result = await auditFile(projectName, normalizedPath, fileContent);
       const formattedFindings = formatFindings(result);
       setFindings(formattedFindings);
     } catch (err) {

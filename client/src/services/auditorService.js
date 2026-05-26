@@ -1,213 +1,131 @@
-import axios from "axios";
+// auditorService.js
 
-// Python Auditor backend runs on a different port (FastAPI)
+import axios from 'axios';
+import { getFileContent } from './api';
+
 const AUDITOR_BASE_URL = import.meta.env.VITE_AUDITOR_URL || "http://localhost:8000";
-const SERVER_BASE_URL = "http://localhost:3001";
+const SERVER_BASE_URL = "http://localhost:3001";  // ✅ All audit calls go here now
 
-/**
- * Health check for auditor backend
- */
-export const checkAuditorHealth = async () => {
+// ✅ Single file audit
+export const auditFile = async (projectName, filePath, code) => {
   try {
-    const response = await axios.get(`${AUDITOR_BASE_URL}/health`);
-    return response.data;
-  } catch (error) {
-    console.error("Auditor health check failed:", error.message);
-    return null;
-  }
-};
-
-/**
- * Audit a single file from the workspace
- * @param {string} projectName - Name of the workspace project
- * @param {string} filePath - Relative path to the file (e.g., "src/app.py")
- * @returns {Object} Findings with LLM explanations and patch suggestions
- */
-export const auditFile = async (projectName, filePath) => {
-  try {
-    const response = await axios.post(`${AUDITOR_BASE_URL}/audit`, {
-      project_name: projectName,
-      file_path: filePath,
-    });
-    return response.data;
-  } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.message;
-    throw new Error(`Audit failed: ${errorMsg}`);
-  }
-};
-
-/**
- * Audit code content directly
- * @param {string} projectName - Project name for context
- * @param {string} filePath - File path for context
- * @param {string} code - Source code to audit
- * @returns {Object} Findings with explanations
- */
-export const auditCodeContent = async (projectName, filePath, code) => {
-  try {
-    // Save the code first, then audit
-    await axios.post(`${SERVER_BASE_URL}/api/files/${projectName}`, {
-      filePath,
-      content: code,
+    const normalizedPath = filePath.replace(/\\/g, "/"); // normalize Windows paths
+    
+    console.log("[Client] Sending audit request:", {
+      projectName,
+      filePath: normalizedPath,
+      codeLength: code?.length || 0
     });
 
-    // Now audit it
-    return await auditFile(projectName, filePath);
-  } catch (error) {
-    throw new Error(`Code audit failed: ${error.message}`);
-  }
-};
-
-/**
- * Accept a patch suggestion
- * Stores it in MongoDB for future few-shot learning
- */
-export const acceptPatch = async ({
-  projectName,
-  filePath,
-  vulnerabilityId,
-  originalCode,
-  patchedCode,
-  explanation,
-  severity,
-}) => {
-  try {
-    const response = await axios.post(`${AUDITOR_BASE_URL}/patches/accept`, {
-      project_name: projectName,
-      file_path: filePath,
-      vulnerability_id: vulnerabilityId,
-      original_code: originalCode,
-      patched_code: patchedCode,
-      explanation: explanation,
-      severity: severity,
+    const response = await axios.post(`${SERVER_BASE_URL}/api/audit`, {
+      projectName,
+      filename: normalizedPath,
+      code
     });
+
+    console.log("[Client] Audit response:", response.data);
     return response.data;
-  } catch (error) {
-    throw new Error(`Failed to accept patch: ${error.message}`);
+  } catch (err) {
+    console.error("[Client] Audit error:", err);
+    const msg = err.response?.data?.error || err.message;
+    throw new Error(`Audit failed: ${msg}`);
   }
 };
 
-/**
- * Get patch history for a project
- * Shows all previously accepted patches
- */
-export const getPatchHistory = async (projectName) => {
-  try {
-    const response = await axios.get(
-      `${AUDITOR_BASE_URL}/patches/history/${projectName}`
-    );
-    return response.data.patches || [];
-  } catch (error) {
-    console.error("Failed to fetch patch history:", error.message);
-    return [];
+// ✅ Recursively flattens nested file tree into a flat array of files only
+const flattenFileTree = (nodes, result = []) => {
+  for (const node of nodes) {
+    if (node.type === "file") {
+      result.push(node);                          // ✅ only collect files, skip folders
+    } else if (node.type === "folder" && node.children) {
+      flattenFileTree(node.children, result);     // ✅ recurse into subfolders
+    }
   }
+  return result;
 };
 
-/**
- * Get security analytics for a project
- * Returns vulnerability counts by severity and security score
- */
-export const getAnalytics = async (projectName) => {
-  try {
-    const response = await axios.get(
-      `${AUDITOR_BASE_URL}/analytics/${projectName}`
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Failed to fetch analytics:", error.message);
-    return null;
-  }
+const SKIP_EXTENSIONS = [
+  ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico",
+  ".woff", ".woff2", ".ttf", ".eot",
+  ".zip", ".tar", ".gz",
+  ".lock", ".log", ".env"
+];
+
+const shouldSkipFile = (filePath) => {
+  const lower = filePath.toLowerCase();
+  return SKIP_EXTENSIONS.some(ext => lower.endsWith(ext));
 };
 
-/**
- * Audit all files in a project directory
- * Scans supported languages only
- */
+
+// ✅ Full project audit
 export const auditProject = async (projectName, fileTree) => {
-  const findings = [];
+  const results = [];
+  const files = flattenFileTree(fileTree);
 
-  const supportedExtensions = [
-    ".py",
-    ".js",
-    ".jsx",
-    ".ts",
-    ".tsx",
-    ".java",
-    ".go",
-    ".rs",
-    ".cpp",
-    ".c",
-    ".rb",
-    ".php",
-  ];
-
-  const collectFiles = (tree) => {
-    const files = [];
-    for (const item of tree) {
-      if (item.type === "file") {
-        const ext = item.name.substring(item.name.lastIndexOf("."));
-        if (supportedExtensions.includes(ext)) {
-          files.push(item.path);
-        }
-      } else if (item.type === "folder" && item.children) {
-        files.push(...collectFiles(item.children));
-      }
-    }
-    return files;
-  };
-
-  const files = collectFiles(fileTree);
-  
-  if (files.length === 0) {
-    console.warn("No supported files found to audit");
-    return [];
-  }
-
-  // Audit each file
   for (const file of files) {
+    // ✅ Skip binary/lock/irrelevant files
+    if (shouldSkipFile(file.path)) {
+      console.log(`Skipping: ${file.path}`);
+      continue;
+    }
+
     try {
-      // Normalize path: convert backslashes to forward slashes
-      const normalizedPath = file.replace(/\\/g, "/");
-      const result = await auditFile(projectName, normalizedPath);
-      
-      if (result && result.findings && result.findings.length > 0) {
-        findings.push({
-          file: normalizedPath,
-          findings: result.findings,
-          vulnerabilityCount: result.vulnerability_count || result.findings.length,
-        });
-      }
-    } catch (error) {
-      console.warn(`Failed to audit ${file}:`, error.message);
-      // Continue to next file instead of stopping
+      const normalizedPath = file.path.replace(/\\/g, "/");
+      // ✅ Read the file content before auditing
+      const fileContent = await getFileContent(projectName, file.path);
+      const result = await auditFile(projectName, normalizedPath, fileContent);
+      results.push({ file: normalizedPath, findings: result });
+    } catch (err) {
+      console.warn(`Failed to audit ${file.path}:`, err.message);
     }
   }
 
+  return results;
+};
+
+// ✅ Format audit findings into a consistent structure
+export const formatFindings = (data) => {
+  console.log("[Format] Input data:", data);
+  
+  // Handle both direct array and object with findings property
+  let findings = Array.isArray(data) ? data : (data?.findings || data);
+  
+  // Handle wrapped responses from DB
+  if (Array.isArray(findings)) {
+    findings = findings.map(f => ({
+      id: f._id || f.id,
+      severity: f.severity || "low",
+      message: f.message || f.title || "Unknown issue",
+      line: f.line || 0,
+      type: f.type || "security",
+      ...f
+    }));
+  } else if (findings && typeof findings === "object") {
+    // Single finding - wrap in array
+    findings = [{
+      id: findings._id || findings.id,
+      severity: findings.severity || "low",
+      message: findings.message || findings.title || "Unknown issue",
+      line: findings.line || 0,
+      type: findings.type || "security",
+      ...findings
+    }];
+  } else {
+    findings = [];
+  }
+  
+  console.log("[Format] Output findings:", findings);
   return findings;
 };
 
-/**
- * Format audit findings for UI display
- */
-export const formatFindings = (auditResponse) => {
-  if (!auditResponse.findings) return [];
+// ✅ Fetch past audit findings for a project
+export const getProjectFindings = async (projectName) => {
+  const response = await axios.get(`${SERVER_BASE_URL}/api/audit/${projectName}`);
+  return response.data;
+};
 
-  return auditResponse.findings.map((finding, index) => ({
-    id: finding.id,
-    title: finding.rule_id || "Security Issue",
-    severity: finding.severity || "info",
-    line: finding.line_start,
-    lineEnd: finding.line_end,
-    message: finding.message,
-    cwe: finding.cwe,
-    owasp: finding.owasp,
-    tool: finding.tool,
-    code: finding.code_snippet,
-    description: finding.llm?.plain_english || finding.message,
-    whyDangerous: finding.llm?.why_dangerous || "",
-    suggestedFix: finding.llm?.patched_code || "",
-    whatChanged: finding.llm?.what_changed || "",
-    sourceContext: finding.source_context,
-    index,
-  }));
+// ✅ Accept a patch
+export const acceptPatch = async (findingId) => {
+  const response = await axios.patch(`${SERVER_BASE_URL}/api/audit/${findingId}/accept`);
+  return response.data;
 };
