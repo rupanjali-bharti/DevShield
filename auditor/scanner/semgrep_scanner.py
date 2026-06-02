@@ -9,11 +9,13 @@ logger = logging.getLogger(__name__)
 
 class SemgrepScanner:
     def __init__(self):
-        self.rules_path = Path(__file__).parent / "rules"
+        self.timeout = 30
         
     def scan_code(self, code_content, filename, workspace_root=None):
         """Scan code content with Semgrep."""
         try:
+            logger.debug(f"Starting Semgrep scan for {filename}")
+            
             # Create a temporary file with the code content
             file_ext = Path(filename).suffix or '.txt'
             
@@ -45,24 +47,33 @@ class SemgrepScanner:
     def _run_semgrep(self, file_path, original_filename):
         """Run Semgrep analysis on a file."""
         try:
+            # Check if semgrep is available
+            try:
+                subprocess.run(['semgrep', '--version'], 
+                             capture_output=True, check=True, timeout=5)
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                logger.warning("Semgrep not available, skipping scan")
+                return []
+            
             cmd = [
                 'semgrep',
                 '--json',
-                '--config=auto',  # Use Semgrep's default rules
+                '--config=auto',
+                '--quiet',
                 file_path
             ]
             
-            logger.debug(f"Running Semgrep command: {' '.join(cmd)}")
+            logger.debug(f"Running Semgrep: {' '.join(cmd)}")
             
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=30  # 30-second timeout
+                timeout=self.timeout
             )
             
-            if result.returncode != 0:
-                logger.warning(f"Semgrep returned non-zero exit code: {result.returncode}")
+            if result.returncode not in [0, 1]:  # 0 = no issues, 1 = issues found
+                logger.warning(f"Semgrep returned exit code: {result.returncode}")
                 logger.warning(f"Stderr: {result.stderr}")
                 return []
             
@@ -85,18 +96,16 @@ class SemgrepScanner:
                     }
                     findings.append(finding)
                 
-                logger.info(f"Semgrep found {len(findings)} issues")
+                logger.info(f"Semgrep found {len(findings)} issues in {original_filename}")
                 return findings
                 
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse Semgrep JSON output: {e}")
+                logger.debug(f"Raw output: {result.stdout[:500]}...")
                 return []
                 
         except subprocess.TimeoutExpired:
-            logger.error("Semgrep scan timed out")
-            return []
-        except FileNotFoundError:
-            logger.error("Semgrep not found. Please install semgrep: pip install semgrep")
+            logger.error(f"Semgrep scan timed out after {self.timeout} seconds")
             return []
         except Exception as e:
             logger.error(f"Semgrep scan error: {e}")

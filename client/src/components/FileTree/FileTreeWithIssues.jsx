@@ -1,120 +1,117 @@
-import { useState } from "react";
+import React, { useState } from 'react';
 
-const FileIcon = ({ type, isOpen, issueCount }) => {
-  if (type === "folder") {
-    return (
-      <span className="mr-2 text-yellow-400">
-        {isOpen ? "📂" : "📁"}
-      </span>
-    );
-  }
-  
-  if (issueCount && issueCount > 0) {
-    return (
-      <span className="mr-2 text-red-400">⚠</span>
-    );
-  }
-  return <span className="mr-2 text-blue-400">📄</span>;
-};
 
-const getIssueBadgeColor = (count) => {
-  if (!count || count === 0) return null;
-  if (count >= 5) return "bg-red-600 text-white";
-  if (count >= 3) return "bg-orange-600 text-white";
-  return "bg-yellow-600 text-white";
-};
+const FileTreeWithIssues = ({ fileTree, onFileClick, selectedFile, issuesMap = {} }) => {
+  const [expandedFolders, setExpandedFolders] = useState(new Set(['src'])); // Default expand src
 
-const FileTreeItem = ({ item, depth = 0, onFileClick, selectedFile, issuesMap = {} }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const issueCount = issuesMap[item.path] || 0;
-
-  const handleClick = () => {
-    if (item.type === "folder") {
-      setIsOpen(!isOpen);
+  const toggleFolder = (path) => {
+    const newExpanded = new Set(expandedFolders);
+    if (newExpanded.has(path)) {
+      newExpanded.delete(path);
     } else {
-      onFileClick(item);
+      newExpanded.add(path);
     }
+    setExpandedFolders(newExpanded);
   };
 
-  const badgeColor = getIssueBadgeColor(issueCount);
+  const renderFileTreeNode = (node, depth = 0) => {
+    const { name, path, type, children } = node;
+    const isExpanded = expandedFolders.has(path);
+    const isSelected = selectedFile?.path === path;
+    const issueCount = issuesMap[path] || 0;
+    const hasIssues = issueCount > 0;
 
-  return (
-    <div>
-      <div
-        onClick={handleClick}
-        className={`flex items-center py-1.5 px-2 cursor-pointer rounded text-sm hover:bg-gray-700 transition-colors
-          ${selectedFile?.path === item.path ? "bg-gray-700 text-green-400" : "text-gray-300"}
-        `}
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
-      >
-        <FileIcon type={item.type} isOpen={isOpen} issueCount={issueCount} />
-        <span className="truncate flex-1">{item.name}</span>
-        
-        {issueCount > 0 && badgeColor && (
-          <span className={`${badgeColor} text-xs px-1.5 py-0.5 rounded-full font-medium ml-2 flex-shrink-0`}>
-            {issueCount}
+    return (
+      <div key={path}>
+        <div
+          className={`flex items-center px-2 py-1 cursor-pointer hover:bg-gray-700 transition-colors ${
+            isSelected ? 'bg-blue-600' : ''
+          }`}
+          style={{ paddingLeft: `${8 + depth * 16}px` }}
+          onClick={() => {
+            if (type === 'folder') {
+              toggleFolder(path);
+            } else {
+              onFileClick(node);
+            }
+          }}
+        >
+          {/* Icon */}
+          <span className="mr-2 text-sm">
+            {type === 'folder' ? (
+              isExpanded ? '📂' : '📁'
+            ) : (
+              getFileIcon(name)
+            )}
           </span>
+
+          {/* Name */}
+          <span className={`text-sm truncate flex-1 ${
+            type === 'folder' ? 'text-gray-200' : 'text-gray-300'
+          }`}>
+            {name}
+          </span>
+
+          {/* Issue Badge */}
+          {hasIssues && (
+            <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[16px] text-center">
+              {issueCount}
+            </span>
+          )}
+        </div>
+
+        {/* Children */}
+        {type === 'folder' && isExpanded && children && children.length > 0 && (
+          <div>
+            {children.map((child) => renderFileTreeNode(child, depth + 1))}
+          </div>
         )}
       </div>
+    );
+  };
 
-      {item.type === "folder" && isOpen && item.children && (
-        <div>
-          {item.children.map((child, index) => (
-            <FileTreeItem
-              key={index}
-              item={child}
-              depth={depth + 1}
-              onFileClick={onFileClick}
-              selectedFile={selectedFile}
-              issuesMap={issuesMap}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-function FileTreeWithIssues({ fileTree, onFileClick, selectedFile, issuesMap = {} }) {
   if (!fileTree || fileTree.length === 0) {
     return (
-      <div className="text-gray-500 text-sm p-4">
+      <div className="p-3 text-gray-400 text-sm">
         No files found
       </div>
     );
   }
 
-  // Calculate total issues
-  const totalIssues = Object.values(issuesMap).reduce((sum, count) => sum + count, 0);
-
   return (
-    <div className="flex flex-col h-full">
-      {/* Files header with issue summary */}
-      <div className="px-3 py-2 border-b border-gray-700">
-        <p className="text-gray-400 text-xs uppercase tracking-wider">
-          Files
-        </p>
-        {totalIssues > 0 && (
-          <p className="text-red-400 text-xs mt-1">
-            ⚠ {totalIssues} issue{totalIssues !== 1 ? "s" : ""} found
-          </p>
-        )}
-      </div>
-
-      {/* Files list */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {fileTree.map((item, index) => (
-          <FileTreeItem
-            key={index}
-            item={item}
-            onFileClick={onFileClick}
-            selectedFile={selectedFile}
-            issuesMap={issuesMap}
-          />
-        ))}
-      </div>
+    <div className="text-sm">
+      {fileTree.map((node) => renderFileTreeNode(node))}
     </div>
   );
-}
+};
+
+// Helper function to get file icons
+const getFileIcon = (filename) => {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  
+  const iconMap = {
+    js: '🟨',
+    jsx: '⚛️',
+    ts: '🔷',
+    tsx: '⚛️',
+    py: '🐍',
+    json: '📄',
+    html: '🌐',
+    css: '🎨',
+    md: '📝',
+    txt: '📄',
+    yml: '⚙️',
+    yaml: '⚙️',
+    env: '🔧',
+    gitignore: '🚫',
+    dockerfile: '🐳',
+    sql: '🗃️',
+    sh: '📜',
+    bat: '📜',
+  };
+
+  return iconMap[ext] || '📄';
+};
+
 
 export default FileTreeWithIssues;

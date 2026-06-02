@@ -12,6 +12,31 @@ const router = express.Router();
 
 const WORKSPACES_DIR = path.join(__dirname, "../../../workspaces");
 
+// Get list of available workspaces
+router.get("/list/workspaces", (req, res) => {
+  try {
+    if (!fs.existsSync(WORKSPACES_DIR)) {
+      return res.json({ workspaces: [] });
+    }
+
+    const items = fs.readdirSync(WORKSPACES_DIR);
+    const workspaces = items
+      .filter((item) => {
+        const fullPath = path.join(WORKSPACES_DIR, item);
+        return fs.statSync(fullPath).isDirectory();
+      })
+      .map((item) => ({
+        name: item,
+        path: path.join(WORKSPACES_DIR, item),
+      }));
+
+    res.json({ workspaces });
+  } catch (error) {
+    console.error("Error listing workspaces:", error.message);
+    res.status(500).json({ error: "Failed to list workspaces" });
+  }
+});
+
 // Clone a repo
 router.post("/clone", async (req, res) => {
   const { repoUrl, projectName } = req.body;

@@ -1,112 +1,92 @@
-"""
-DevShield Auditor Configuration.
-Loads settings from environment variables with sensible defaults for development.
-"""
 
 import os
-from typing import List
-from dotenv import load_dotenv
+from pathlib import Path
 
-# Load .env file if it exists
-load_dotenv()
+class Config:
+    """Configuration settings for DevShield Auditor."""
+    
+    # CORS Settings
+    ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:3001"
+    ]
+    
+    # Workspace Settings
+    # ─── Workspace Paths ─────────────────────────────────────────────────────────
 
-# ─── FastAPI / CORS ──────────────────────────────────────────────────────────
+    # Where user workspaces are stored (absolute path)
+    # Example: /home/user/DevShield/workspaces or C:\Users\DevShield\workspaces
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # BASE_DIR = devshield/
+    WORKSPACES_PATH = os.environ.get(
+        "WORKSPACES_PATH",
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "workspaces"))
+    )
 
-ALLOWED_ORIGINS: List[str] = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+    
+    # Database Settings
+    MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+    MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "devshield")
+    
+    # LLM Settings
+    LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")  # 'groq' or 'ollama'
+    
+    # Groq Settings
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+    GROQ_MODEL = os.getenv("GROQ_MODEL", "mixtral-8x7b-32768")
+    
+    # Ollama Settings
+    OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "codellama")
+    
+    # Scanner Settings
+    SEMGREP_TIMEOUT = int(os.getenv("SEMGREP_TIMEOUT", "30"))
+    
+    # Logging Settings
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    
+    @classmethod
+    def get_workspace_path(cls, project_name):
+        """Get the full path to a project's workspace."""
+        return os.path.join(cls.WORKSPACES_PATH, project_name)
+    
+    @classmethod
+    def validate_config(cls):
+        """Validate configuration settings."""
+        issues = []
+        
+        # Check workspace path
+        if not os.path.exists(cls.WORKSPACES_PATH):
+            issues.append(f"Workspaces directory not found: {cls.WORKSPACES_PATH}")
+        
+        # Check LLM provider settings
+        if cls.LLM_PROVIDER == "groq" and not cls.GROQ_API_KEY:
+            issues.append("GROQ_API_KEY is required when using Groq LLM provider")
+        
+        return issues
 
-# ─── Workspace Paths ─────────────────────────────────────────────────────────
+# Load environment variables from .env file if it exists
+try:
+    from dotenv import load_dotenv
+    env_path = Path(__file__).parent / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    # dotenv not installed, skip
+    pass
 
-# Where user workspaces are stored (absolute path)
-# Example: /home/user/DevShield/workspaces or C:\Users\DevShield\workspaces
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# BASE_DIR = devshield/
-WORKSPACES_PATH = os.environ.get(
-    "WORKSPACES_PATH",
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "workspaces"))
-)
-
-
-# ─── MongoDB Configuration ───────────────────────────────────────────────────
-
-MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-MONGO_DB_NAME: str = os.getenv("MONGO_DB_NAME", "devshield")
-
-# ─── LLM Provider Selection ──────────────────────────────────────────────────
-# Valid values: "groq" (production) or "ollama" (local development)
-
-LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "groq").lower()
-
-# ─── Groq Configuration (Production LLM) ─────────────────────────────────────
-
-GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL: str = os.getenv("GROQ_MODEL", "mixtral-8x7b-32768")
-LLM_TIMEOUT_GROQ: int = int(os.getenv("LLM_TIMEOUT_GROQ", "30"))
-
-# ─── Ollama Configuration (Local Development LLM) ────────────────────────────
-
-OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "mistral")
-LLM_TIMEOUT_OLLAMA: int = int(os.getenv("LLM_TIMEOUT_OLLAMA", "60"))
-
-# ─── Scanner Timeouts ───────────────────────────────────────────────────────
-
-SEMGREP_TIMEOUT: int = int(os.getenv("SEMGREP_TIMEOUT", "45"))
-BANDIT_TIMEOUT: int = int(os.getenv("BANDIT_TIMEOUT", "30"))
-
-# ─── Finding Deduplication ──────────────────────────────────────────────────
-# Findings within N lines of each other are considered duplicates
-
-DEDUP_LINE_TOLERANCE: int = int(os.getenv("DEDUP_LINE_TOLERANCE", "3"))
-
-# ─── LLM Few-Shot Learning ──────────────────────────────────────────────────
-# Max number of recent accepted patches to inject as few-shot examples
-
-MAX_FEW_SHOT_EXAMPLES: int = int(os.getenv("MAX_FEW_SHOT_EXAMPLES", "5"))
-
-# ─── Code Context for LLM ───────────────────────────────────────────────────
-# How many lines of context around a vulnerability to pass to LLM
-
-MAX_CODE_CONTEXT_LINES: int = int(os.getenv("MAX_CODE_CONTEXT_LINES", "20"))
-
-# ─── Validation ──────────────────────────────────────────────────────────────
-
-if LLM_PROVIDER not in ("groq", "ollama"):
-    raise ValueError(f"LLM_PROVIDER must be 'groq' or 'ollama', got '{LLM_PROVIDER}'")
-
-if LLM_PROVIDER == "groq" and not GROQ_API_KEY:
-    print("[⚠️  WARNING] GROQ_API_KEY is not set. Groq calls will fail.")
-    print("  Set it via: export GROQ_API_KEY='your-key-here'")
-
-# ─── Settings Object (for import compatibility) ────────────────────────────────
-
-class _Settings:
-    # CORS
-    ALLOWED_ORIGINS: List[str] = ALLOWED_ORIGINS
-
-    # Paths
-    WORKSPACES_PATH: str = WORKSPACES_PATH
-
-    # MongoDB
-    MONGO_URI: str = MONGO_URI
-    MONGO_DB_NAME: str = MONGO_DB_NAME
-
-    # LLM
-    LLM_PROVIDER: str = LLM_PROVIDER
-    GROQ_API_KEY: str = GROQ_API_KEY
-    GROQ_MODEL: str = GROQ_MODEL
-    LLM_TIMEOUT_GROQ: int = LLM_TIMEOUT_GROQ
-    OLLAMA_BASE_URL: str = OLLAMA_BASE_URL
-    OLLAMA_MODEL: str = OLLAMA_MODEL
-    LLM_TIMEOUT_OLLAMA: int = LLM_TIMEOUT_OLLAMA
-
-    # Scanners
-    SEMGREP_TIMEOUT: int = SEMGREP_TIMEOUT
-    BANDIT_TIMEOUT: int = BANDIT_TIMEOUT
-
-    # Tuning
-    DEDUP_LINE_TOLERANCE: int = DEDUP_LINE_TOLERANCE
-    MAX_FEW_SHOT_EXAMPLES: int = MAX_FEW_SHOT_EXAMPLES
-    MAX_CODE_CONTEXT_LINES: int = MAX_CODE_CONTEXT_LINES
-
-# Singleton instance — import this everywhere
-settings = _Settings()
+# Print configuration for debugging
+if __name__ == "__main__":
+    print("DevShield Auditor Configuration:")
+    print(f"WORKSPACES_PATH: {Config.WORKSPACES_PATH}")
+    print(f"MONGO_URI: {Config.MONGO_URI}")
+    print(f"LLM_PROVIDER: {Config.LLM_PROVIDER}")
+    
+    validation_issues = Config.validate_config()
+    if validation_issues:
+        print("Configuration Issues:")
+        for issue in validation_issues:
+            print(f"  - {issue}")
+    else:
+        print("✅ Configuration is valid")
