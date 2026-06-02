@@ -1,56 +1,66 @@
 # 🛡️ DevShield
-### Self-Improving AI Codebase Auditor & Security-First IDE
 
-DevShield is a **browser-based, AI-powered development environment** that combines intelligent code editing with **real-time security auditing**. Unlike traditional AI tools that treat code as plain text, DevShield understands code as **structured logic** using graphs.
+![DevShield Banner](https://img.shields.io/badge/DevShield-Security%20First-blue?style=for-the-badge)
+[![Python](https://img.shields.io/badge/Python-3.9+-brightgreen)](https://python.org)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-18+-blue)](https://reactjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-red)](https://fastapi.tiangolo.com)
+
+> **AI-powered security-first browser-based development environment for modern development teams.**
+
+## 🚀 Overview
+
+DevShield is an innovative browser-based IDE that provides **real-time security auditing** while you code. Built for mid-sized product companies and AI startups, it combines collaborative development with intelligent security analysis using advanced Abstract Syntax Tree (AST) parsing and graph-based vulnerability detection.
+
+### ✨ Key Features
+
+- 🛡️ **Real-time Security Auditing:** AI-powered vulnerability detection with AST and graph analysis.
+- 🌐 **Browser-based IDE:** No local setup required, works anywhere with Monaco Editor.
+- 🤝 **Collaborative Coding:** Multi-user real-time editing powered by Socket.io.
+- 📊 **Security Analytics:** Comprehensive vulnerability reporting and contextual patch suggestions.
+- 🔧 **Multi-language Support:** 165+ programming languages supported via Tree-sitter.
+- 🧠 **Graph-based Analysis:** Advanced Code Property Graph (CPG) for deep data flow analysis.
+- 🤖 **LLM Integration:** Groq API and local Ollama support for intelligent explanations and code fixes.
 
 ---
 
-## 🚀 Why DevShield?
+## 💡 Why DevShield?
 
-Standard AI tools (like GitHub Copilot) often generate fixes that break logic or miss vulnerabilities. DevShield solves this by grounding AI in **code structure + data flow**.
+Standard AI tools (like GitHub Copilot) often generate fixes that break logic or miss critical vulnerabilities. DevShield solves this by grounding AI in **code structure + data flow**.
 
 | AI Limitation        | DevShield Solution                                      | Technology Used           |
 |----------------------|---------------------------------------------------------|---------------------------|
-| Syntax Errors        | Validates patches against **AST** before suggesting     | Tree-sitter, Monaco       |
-| Location Errors      | Injects fixes at exact logical node                     | Code Property Graph (CPG) |
-| Semantic Drift       | Ensures logic consistency via **CFG tracking**          | Control Flow Graph        |
-| Misleading Fixes     | Verifies secure flow using **Taint Analysis**           | Data Flow Graph           |
-| Partial Fixes        | Detects cross-file issues via repo-wide analysis        | GNN Embeddings            |
-| Human Intent Gap     | Learns from accepted/rejected fixes                     | Feedback Loop             |
+| **Syntax Errors** | Validates patches against **AST** before suggesting     | Tree-sitter, Monaco       |
+| **Location Errors** | Injects fixes at the exact logical node                 | Code Property Graph (CPG) |
+| **Semantic Drift** | Ensures logic consistency via **CFG tracking** | Control Flow Graph        |
+| **Misleading Fixes** | Verifies secure flow using **Taint Analysis** | Data Flow Graph           |
+| **Partial Fixes** | Detects cross-file issues via repo-wide analysis        | GNN Embeddings            |
+| **Human Intent Gap** | Learns from accepted/rejected fixes                     | Feedback Loop             |
 
 ---
 
-## 🧠 Core Innovation: Graph-First AI
+## 🏗️ System Architecture
 
-DevShield converts code into a **Code Property Graph (CPG)**, combining:
+DevShield operates on a three-tier microservice architecture, separating the user interface, file management, and heavy security analysis.
 
-- **AST (Abstract Syntax Tree)** → Syntax structure  
-- **CFG (Control Flow Graph)** → Execution paths  
-- **PDG (Program/Data Flow Graph)** → Data dependencies  
+### Visual Flow
 
-A **Graph Neural Network (GNN)** analyzes this structure to detect:
-- Unsafe data flows
-- Injection vulnerabilities
-- Logic anomalies
-
----
-
-## 🏗️ Visual Architecture
-            ┌────────────────────────────-┐
-            │        Frontend (UI)        │
-            │-----------------------------│
-            │ • Monaco Editor             │
-            │ • File Explorer             │
-            │ • Xterm.js (Logs/AI Trace)  │
-            │ • Tailwind UI               │
-            └────────────┬───────────────-┘
+```text
+            ┌────────────────────────────┐
+            │        Frontend (UI)       │
+            │----------------------------│
+            │ • Monaco Editor            │
+            │ • File Explorer            │
+            │ • Xterm.js (Logs/AI)       │
+            │ • Tailwind UI              │
+            └────────────┬───────────────┘
                          │
                          ▼
             ┌────────────────────────────┐
-            │     Backend (Node.js)      │
+            │    Backend (Node.js)       │
             │----------------------------│
             │ • Express API              │
-            │ • Socket.io (Realtime)     │
+            │ • Socket.io (Real-time)    │
             │ • Workspace Manager        │
             └────────────┬───────────────┘
                          │
@@ -74,74 +84,89 @@ A **Graph Neural Network (GNN)** analyzes this structure to detect:
     │ • Learns from user feedback                  │
     └──────────────────────────────────────────────┘
 
-    
----
 
-## ⚙️ System Architecture (Detailed)
 
-### 1. 🖥️ Frontend (The Interface)
-- **Monaco Editor** → Multi-file editing with IntelliSense  
-- **Xterm.js** → Real-time logs (AI reasoning, GNN output)  
-- **Tailwind CSS** → Clean developer UI  
 
----
+## 🚀 Technology Stack
 
-### 2. 🧠 Reasoning Engine (The Brain)
-- **Graph Construction**
-  - Code → CPG (AST + CFG + PDG)
-- **GNN Layer**
-  - Detects anomalous data/control flows
-- **LLM Reasoning**
-  - Generates:
-    - Human-readable explanations
-    - Structurally correct patches
+* **Frontend (Port 5173):** React.js 18+, Vite, Monaco Editor, Tailwind CSS v3, Socket.io Client, Axios
+* **Backend Server (Port 3001):** Node.js 18+, Express.js, Socket.io, `simple-git`, MongoDB + Mongoose, CORS, UUID
+* **Security Auditor (Port 8000):** Python 3.9+, FastAPI, Tree-sitter, Semgrep, NetworkX (Graph Analysis), Groq API / Ollama
 
 ---
 
-### 3. 🔐 Security & Analytics Layer
-- **Multi-Engine Scan**
-  - Semgrep
-  - Bandit
-  - Custom GNN
-- **Taint Analysis**
-  - Tracks input → vulnerable sink
-- **Self-Improving Loop**
-  - Stores feedback in vector DB
-  - Improves future suggestions
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-- React.js
-- Monaco Editor
-- Tailwind CSS
-
-### Backend
-- Node.js
-- Express
-- Socket.io
-
-### AI & Security
-- Python
-- Tree-sitter
-- Semgrep
-- Bandit
-- Ollama / Groq API
-- Graph Neural Networks (GNN)
-
-### Database
-- MongoDB (for analytics + feedback loop)
-
----
-
-## 📂 Project Structure
+## 📁 Project Structure
 
 ```text
 devshield/
 ├── client/          # React Frontend (Monaco, Tailwind, Socket.io)
-├── server/          # Node.js Backend (Express, APIs)
+├── server/          # Node.js Backend (Express, APIs, MongoDB)
 ├── auditor/         # Python Security Engine (GNN, Tree-sitter, Semgrep)
-├── workspaces/      # ⚠️ LOCAL ONLY: User project directory
+├── workspaces/      # ⚠️ LOCAL ONLY: User project directory (Git clones)
 └── README.md
+
+
+1. Clone the Repository
+git clone [https://github.com/rupanjali-bharti/DevShield.git](https://github.com/rupanjali-bharti/DevShield.git)
+cd DevShield/devshield
+
+2. Setup Frontend
+cd client
+npm install
+npm run dev
+# Starts on http://localhost:5173
+
+3. Setup Backend Server
+cd ../server
+npm install
+
+# Create environment file
+echo "MONGO_URI=mongodb://localhost:27017/devshield" > .env
+echo "PYTHON_AUDITOR_URL=http://localhost:8000" >> .env
+echo "PORT=3001" >> .env
+
+npm run dev
+# Starts on http://localhost:3001
+
+4. Setup Security Auditor
+cd ../auditor
+
+# Create and activate virtual environment
+python -m venv venv
+
+# Activate (Windows):
+venv\Scripts\activate
+# Activate (macOS/Linux):
+# source venv/bin/activate
+
+# Install dependencies
+pip install fastapi uvicorn[standard] tree-sitter tree-sitter-language-pack networkx pydantic python-dotenv semgrep groq requests
+
+# Start the security auditor
+uvicorn main:app --reload --port 8000
+# Starts on http://localhost:8000
+
+## 🎯 Usage Guide
+Clone a Repository: Enter a GitHub repository URL in the DevShield interface. The system will clone the repository to server/workspaces/{projectName} and automatically load the file tree.
+
+Code Editing: Browse files and edit them natively in the integrated Monaco Editor with full syntax highlighting. Supports auto-save (Ctrl+S) and real-time collaborative editing.
+
+Security Auditing: Trigger the Audit execution for file-level or project-level analysis. View real-time vulnerability detection, comprehensive reports, and AI-powered explanations.
+
+Review & Manage Findings: Browse issues categorized by severity. Accept or reject AI-generated patch suggestions, track resolution progress, and export audit reports for compliance.
+
+## 🔬 Security Analysis Features
+Static Analysis Engine: Integrates Semgrep with 500+ security rules covering 20+ languages. Detects common patterns (SQLi, XSS) and OWASP Top 10 vulnerabilities out of the box.
+
+AST-Based Analysis: Utilizes Tree-sitter to parse 165+ languages, extract discrete code structures (functions, classes), and flag dangerous API usage based on language-specific rulesets.
+
+Advanced Graph Analysis:
+
+Builds a Code Property Graph (CPG) linking AST, Control Flow, and Data Flow.
+
+Conducts Taint Analysis to track user input to sensitive sinks.
+
+Uses NetworkX for complex graph algorithms to trace multi-step vulnerability paths.
+
+AI-Powered Intelligence: Leverages Groq (for production) or Ollama (for local inference) to provide natural language vulnerability explanations, context-aware code fixes, and structural patch validation.
+
